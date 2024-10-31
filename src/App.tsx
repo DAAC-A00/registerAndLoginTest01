@@ -1,8 +1,9 @@
 // src/App.tsx
 
-import React, { useState, useEffect } from 'react'; // React와 상태 관리 훅(useState, useEffect)을 임포트합니다.
+import React, { useEffect } from 'react'; // React와 상태 관리 훅(useAtom, useEffect)을 임포트합니다.
 import { View, Text, TextInput, Button, StyleSheet, Alert, FlatList, TouchableOpacity } from 'react-native'; // React Native의 UI 컴포넌트를 임포트합니다.
 import AsyncStorage from '@react-native-async-storage/async-storage'; // 로컬 스토리지에 데이터를 저장하기 위한 라이브러리를 임포트합니다.
+import { atom, useAtom } from 'jotai'; // Jotai의 atom과 useAtom을 임포트합니다.
 
 // User 인터페이스를 정의합니다. 사용자 데이터의 구조를 설정합니다.
 interface User {
@@ -14,6 +15,18 @@ interface User {
   gender: string; // 사용자 성별
 }
 
+// 사용자 목록을 관리하는 atom을 정의합니다.
+const usersAtom = atom<User[]>([]); // 사용자 목록 상태를 정의하는 atom
+// 로그인 상태를 관리하는 atom을 정의합니다.
+const isLoggedInAtom = atom(false); // 로그인 상태를 정의하는 atom
+// 사용자 정보를 관리하는 atom을 정의합니다.
+const emailAtom = atom(''); // 이메일 입력 상태 atom
+const passwordAtom = atom(''); // 비밀번호 입력 상태 atom
+const nameAtom = atom(''); // 이름 입력 상태 atom
+const birthdateAtom = atom(''); // 생년월일 입력 상태 atom
+const genderAtom = atom(''); // 성별 입력 상태 atom
+const isSignUpScreenAtom = atom(false); // 회원가입 화면 여부를 관리하는 atom
+
 // 고유 ID를 생성하는 함수입니다. 임의의 문자열을 반환합니다.
 const generateId = () => {
   return Math.random().toString(36).substr(2, 9); // 랜덤한 문자열을 생성하여 반환합니다.
@@ -21,14 +34,15 @@ const generateId = () => {
 
 // App 컴포넌트를 정의합니다.
 const App = () => {
-  const [isLoggedIn, setIsLoggedIn] = useState(false); // 로그인 상태를 관리하는 상태 변수입니다.
-  const [email, setEmail] = useState(''); // 이메일 입력을 관리하는 상태 변수입니다.
-  const [password, setPassword] = useState(''); // 비밀번호 입력을 관리하는 상태 변수입니다.
-  const [name, setName] = useState(''); // 이름 입력을 관리하는 상태 변수입니다.
-  const [birthdate, setBirthdate] = useState(''); // 생년월일 입력을 관리하는 상태 변수입니다.
-  const [gender, setGender] = useState(''); // 성별 입력을 관리하는 상태 변수입니다.
-  const [users, setUsers] = useState<User[]>([]); // 사용자 목록을 관리하는 상태 변수입니다.
-  const [isSignUpScreen, setIsSignUpScreen] = useState(false); // 회원가입 화면 여부를 관리하는 상태 변수입니다.
+  // Jotai의 useAtom 훅을 사용하여 상태를 관리합니다.
+  const [isLoggedIn, setIsLoggedIn] = useAtom(isLoggedInAtom); // 로그인 상태 atom을 사용
+  const [users, setUsers] = useAtom(usersAtom); // 사용자 목록 atom을 사용
+  const [email, setEmail] = useAtom(emailAtom); // 이메일 입력을 관리하는 상태 변수입니다.
+  const [password, setPassword] = useAtom(passwordAtom); // 비밀번호 입력을 관리하는 상태 변수입니다.
+  const [name, setName] = useAtom(nameAtom); // 이름 입력을 관리하는 상태 변수입니다.
+  const [birthdate, setBirthdate] = useAtom(birthdateAtom); // 생년월일 입력을 관리하는 상태 변수입니다.
+  const [gender, setGender] = useAtom(genderAtom); // 성별 입력을 관리하는 상태 변수입니다.
+  const [isSignUpScreen, setIsSignUpScreen] = useAtom(isSignUpScreenAtom); // 회원가입 화면 여부를 관리하는 상태 변수입니다.
 
   // 컴포넌트가 처음 렌더링될 때 사용자 데이터를 로드합니다.
   useEffect(() => {
@@ -99,119 +113,140 @@ const App = () => {
   );
 
     // App 컴포넌트의 반환 부분입니다.
-    return (
-      <View style={styles.container}>
-        {isLoggedIn ? ( // 로그인 상태에 따라 화면을 다르게 표시합니다.
+  return (
+    <View style={styles.container}>
+      <View style={styles.appBar}>
+        <Text style={styles.appBarTitle}>
+          {isLoggedIn ? '로그인 완료' : isSignUpScreen ? '회원가입' : '로그인'}
+        </Text>
+      </View>
+      <View style={styles.content}>
+        {isLoggedIn ? (
+          <FlatList
+            data={users} // 사용자 목록 데이터
+            keyExtractor={(item) => item.id} // 고유 ID를 키로 사용하여 각 항목을 식별합니다.
+            renderItem={renderItem} // 각 항목을 렌더링하는 함수
+          />
+        ) : isSignUpScreen ? (
           <View>
-            <Text style={styles.title}>로그인 완료</Text>
-            <FlatList
-              data={users} // 사용자 목록 데이터
-              keyExtractor={(item) => item.id} // 고유 ID를 키로 사용하여 각 항목을 식별합니다.
-              renderItem={renderItem} // 각 항목을 렌더링하는 함수
+            <TextInput
+              style={styles.input} // 입력 필드 스타일
+              placeholder="이메일"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
             />
-            <Button title="로그아웃" onPress={handleLogout} />
+            <TextInput
+              style={styles.input}
+              placeholder="비밀번호"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="이름"
+              value={name}
+              onChangeText={setName}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="생년월일 (YYYY-MM-DD)"
+              value={birthdate}
+              onChangeText={setBirthdate}
+            />
+            <TextInput
+              style={styles.input}
+              placeholder="성별"
+              value={gender}
+              onChangeText={setGender}
+            />
           </View>
-        ) : isSignUpScreen ? ( // 회원가입 화면 여부에 따라 다르게 표시합니다.
+        ) : (
           <View>
-            <Text style={styles.title}>회원가입</Text>
             <TextInput
               style={styles.input} // 입력 필드 스타일
-              placeholder="이메일" // 이메일 입력 필드에 대한 설명
-              value={email} // 이메일 상태 변수의 값
-              onChangeText={setEmail} // 이메일 입력 변경 시 상태 업데이트
-              keyboardType="email-address" // 이메일 입력 시 이메일 키패드 표시
+              placeholder="이메일"
+              value={email}
+              onChangeText={setEmail}
+              keyboardType="email-address"
             />
             <TextInput
-              style={styles.input} // 입력 필드 스타일
-              placeholder="비밀번호" // 비밀번호 입력 필드에 대한 설명
-              value={password} // 비밀번호 상태 변수의 값
-              onChangeText={setPassword} // 비밀번호 입력 변경 시 상태 업데이트
-              secureTextEntry // 비밀번호 보안 입력
+              style={styles.input}
+              placeholder="비밀번호"
+              value={password}
+              onChangeText={setPassword}
+              secureTextEntry
             />
-            <TextInput
-              style={styles.input} // 입력 필드 스타일
-              placeholder="이름" // 이름 입력 필드에 대한 설명
-              value={name} // 이름 상태 변수의 값
-              onChangeText={setName} // 이름 입력 변경 시 상태 업데이트
-            />
-            <TextInput
-              style={styles.input} // 입력 필드 스타일
-              placeholder="생년월일 (YYYY-MM-DD)" // 생년월일 입력 필드에 대한 설명
-              value={birthdate} // 생년월일 상태 변수의 값
-              onChangeText={setBirthdate} // 생년월일 입력 변경 시 상태 업데이트
-            />
-            <TextInput
-              style={styles.input} // 입력 필드 스타일
-              placeholder="성별" // 성별 입력 필드에 대한 설명
-              value={gender} // 성별 상태 변수의 값
-              onChangeText={setGender} // 성별 입력 변경 시 상태 업데이트
-            />
-            <Button title="회원가입" onPress={handleSignUp} />
-            <Button title="로그인 화면으로 돌아가기" onPress={() => setIsSignUpScreen(false)} />
-          </View>
-        ) : ( // 로그인 화면인 경우
-          <View>
-            <Text style={styles.title}>로그인</Text>
-            <TextInput
-              style={styles.input} // 입력 필드 스타일
-              placeholder="이메일" // 이메일 입력 필드에 대한 설명
-              value={email} // 이메일 상태 변수의 값
-              onChangeText={setEmail} // 이메일 입력 변경 시 상태 업데이트
-              keyboardType="email-address" // 이메일 입력 시 이메일 키패드 표시
-            />
-            <TextInput
-              style={styles.input} // 입력 필드 스타일
-              placeholder="비밀번호" // 비밀번호 입력 필드에 대한 설명
-              value={password} // 비밀번호 상태 변수의 값
-              onChangeText={setPassword} // 비밀번호 입력 변경 시 상태 업데이트
-              secureTextEntry // 비밀번호 보안 입력
-            />
-            <Button title="로그인" onPress={handleLogin} />
-            <Button title="회원가입하러 가기" onPress={() => setIsSignUpScreen(true)} />
           </View>
         )}
       </View>
-    );
-  };
-  
-  // 스타일을 정의하는 부분입니다.
-  const styles = StyleSheet.create({
-    container: {
-      flex: 1, // 화면 전체를 차지하도록 설정
-      justifyContent: 'center', // 세로 방향 가운데 정렬
-      padding: 16, // 주위 여백 설정
-    },
-    title: {
-      fontSize: 24, // 제목 글자 크기
-      marginBottom: 24, // 제목 아래 여백
-      textAlign: 'center', // 제목 가운데 정렬
-    },
-    input: {
-      height: 40, // 입력 필드 높이
-      borderColor: 'gray', // 입력 필드 테두리 색상
-      borderWidth: 1, // 입력 필드 테두리 두께
-      marginBottom: 16, // 입력 필드 아래 여백
-      paddingHorizontal: 8, // 입력 필드 안쪽 좌우 여백
-    },
-    listTile: {
-      flexDirection: 'row', // 항목을 가로 방향으로 나열
-      padding: 16, // 항목 안쪽 여백
-      borderBottomWidth: 1, // 항목 아래쪽 경계선 두께
-      borderBottomColor: '#ccc', // 항목 아래쪽 경계선 색상
-    },
-    leftColumn: {
-      flex: 1, // 왼쪽 열이 차지하는 비율
-      justifyContent: 'space-between', // 세로 방향으로 아이템 간격을 동일하게
-    },
-    rightColumn: {
-      flex: 1, // 오른쪽 열이 차지하는 비율
-      justifyContent: 'space-between', // 세로 방향으로 아이템 간격을 동일하게
-      alignItems: 'flex-end', // 오른쪽 열의 아이템을 오른쪽 끝에 정렬
-    },
-    listTileText: {
-      fontSize: 16, // 항목 텍스트 크기
-    },
-  });
-  
-  export default App; // App 컴포넌트를 내보냅니다.
-  
+      <View style={styles.buttonContainer}>
+        {isLoggedIn ? (
+          <Button title="로그아웃" onPress={handleLogout} />
+        ) : isSignUpScreen ? (
+          <>
+            <Button title="회원가입" onPress={handleSignUp} />
+            <Button title="로그인 화면으로 돌아가기" onPress={() => setIsSignUpScreen(false)} />
+          </>
+        ) : (
+          <>
+            <Button title="로그인" onPress={handleLogin} />
+            <Button title="회원가입하러 가기" onPress={() => setIsSignUpScreen(true)} />
+          </>
+        )}
+      </View>
+    </View>
+  );
+};
+
+// 스타일을 정의하는 부분입니다.
+const styles = StyleSheet.create({
+  container: {
+    flex: 1, // 화면 전체를 차지하도록 설정
+  },
+  appBar: {
+    backgroundColor: '#6200ea', // AppBar 배경 색상
+    padding: 16, // AppBar 여백
+    alignItems: 'center', // 가운데 정렬
+  },
+  appBarTitle: {
+    color: 'white', // AppBar 제목 색상
+    fontSize: 20, // 제목 글자 크기
+  },
+  content: {
+    flex: 1, // 남은 공간을 차지하도록 설정
+    justifyContent: 'center', // 세로 방향 가운데 정렬
+    paddingHorizontal: 16, // 좌우 여백
+  },
+  buttonContainer: {
+    padding: 16, // 버튼 주위 여백
+  },
+  input: {
+    height: 40, // 입력 필드 높이
+    borderColor: 'gray', // 입력 필드 테두리 색상
+    borderWidth: 1, // 입력 필드 테두리 두께
+    marginBottom: 16, // 입력 필드 아래 여백
+    paddingHorizontal: 8, // 입력 필드 안쪽 좌우 여백
+  },
+  listTile: {
+    flexDirection: 'row', // 항목을 가로 방향으로 나열
+    padding: 16, // 항목 안쪽 여백
+    borderBottomWidth: 1, // 항목 아래쪽 경계선 두께
+    borderBottomColor: '#ccc', // 항목 아래쪽 경계선 색상
+  },
+  leftColumn: {
+    flex: 1, // 왼쪽 열이 차지하는 비율
+    justifyContent: 'space-between', // 세로 방향으로 아이템 간격을 동일하게
+  },
+  rightColumn: {
+    flex: 1, // 오른쪽 열이 차지하는 비율
+    justifyContent: 'space-between', // 세로 방향으로 아이템 간격을 동일하게
+    alignItems: 'flex-end', // 오른쪽 열의 아이템을 오른쪽 끝에 정렬
+  },
+  listTileText: {
+    fontSize: 16, // 항목 텍스트 크기
+  },
+});
+
+export default App; // App 컴포넌트를 내보냅니다.
